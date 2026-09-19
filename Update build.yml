@@ -25,7 +25,7 @@ jobs:
       run: |
         cd extracted_project
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleRelease
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
