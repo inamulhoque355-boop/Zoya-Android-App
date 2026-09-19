@@ -23,7 +23,7 @@ jobs:
 
     - name: Build APK with Gradle
       run: |
-        cd extracted_project
+        cd extracted_project/zoya-ai-companion-project
         chmod +x gradlew
         ./gradlew assembleRelease
 
