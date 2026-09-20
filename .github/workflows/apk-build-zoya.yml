@@ -60,9 +60,12 @@ jobs:
         working-directory: ./extracted_project
         run: npm run build
 
-      - name: Sync Web App to Android
+            - name: Copy Web Files to Android Assets
         working-directory: ./extracted_project
-        run: npm run sync:android
+        run: |
+          mkdir -p android/app/src/main/assets/public
+          cp -r dist/* android/app/src/main/assets/public/
+          
 
       - name: Setup Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
