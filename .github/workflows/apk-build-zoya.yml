@@ -64,7 +64,9 @@ jobs:
         working-directory: ./extracted_project
         run: |
           mkdir -p android/app/src/main/assets/public
-          cp -r dist/* android/app/src/main/assets/public/
+          cp -r extracted_project/dist/* extracted_project/android/app/src/main/assets/public/
+          
+          
           
       - name: Build Debug APK
         working-directory: ./extracted_project/android
