@@ -1,96 +1,313 @@
-name: Build Zoya APK
+Zoya AI Companion — Complete APK Build Prompt
 
-on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
+Prepare this project for a production-ready Android APK.
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+PRIMARY GOAL
 
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+The final APK must install and open directly into the working Zoya AI Companion application.
 
-      - name: Setup JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+The application must NOT show a black screen, blank screen, loading failure, missing assets, broken JavaScript, broken CSS, or WebView loading error.
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+Do not simply hide or ignore errors. Fix the actual root cause.
 
-      - name: Extract Zoya Project ZIP
-        run: |
-          set -e
+---
 
-          mkdir -p extracted_project
+1. PROJECT INSPECTION
 
-          ZIP_FILE=$(find . -maxdepth 1 -type f -name "*.zip" | head -n 1)
+First inspect the complete project structure.
 
-          if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: No Zoya ZIP file found."
-            exit 1
-          fi
+Identify:
 
-          echo "Using ZIP: $ZIP_FILE"
+- React/Vite frontend root
+- "package.json"
+- "vite.config.js" or "vite.config.ts"
+- Android project root
+- Gradle configuration
+- Main Android Activity
+- WebView implementation
+- Android assets directory
+- Existing build scripts
+- Existing GitHub Actions workflows
 
-          unzip -q "$ZIP_FILE" -d extracted_project
+Do not invent file paths. Use the actual project structure.
 
-      - name: Check Zoya Project
-        run: |
-          set -e
+---
 
-          test -f extracted_project/package.json
-          test -d extracted_project/android
+2. FRONTEND BUILD
 
-          echo "Zoya project found."
-          echo "Android project found."
+Build the React/Vite application in production mode.
 
-      - name: Install Node Dependencies
-        working-directory: ./extracted_project
-        run: npm install
+Use the project's existing package manager and scripts where possible.
 
-      - name: Build Zoya Web App
-        working-directory: ./extracted_project
-        run: npm run build
+The build must successfully generate:
 
-      - name: Copy Web Files to Android Assets
-        working-directory: ./extracted_project
-        run: |
-          mkdir -p android/app/src/main/assets/public
-          cp -r extracted_project/dist/* extracted_project/android/app/src/main/assets/public/
-          
-          
-          
-      - name: Build Debug APK
-        working-directory: ./extracted_project/android
-        run: |
-          gradle assembleDebug --stacktrace --no-daemon
+"dist/index.html"
 
-      - name: Find APK
-        run: |
-          set -e
+and all required:
 
-          APK=$(find extracted_project/android/app/build/outputs/apk/debug -type f -name "*.apk" | head -n 1)
+- JavaScript
+- CSS
+- images
+- fonts
+- icons
+- other static assets
 
-          if [ -z "$APK" ]; then
-            echo "ERROR: APK was not generated."
-            exit 1
-          fi
+If the build fails, stop the APK build and show the real error.
 
-          echo "APK found:"
-          echo "$APK"
+Never continue with an incomplete "dist" directory.
 
-          echo "APK_PATH=$APK" >> "$GITHUB_ENV"
+---
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Zoya-APK
-          path: ${{ env.APK_PATH }}
+3. VITE CONFIGURATION
+
+Check:
+
+"vite.config.js"
+
+or:
+
+"vite.config.ts"
+
+Configure the Vite "base" path so that all JavaScript, CSS and static assets can correctly load inside the Android WebView.
+
+Verify the generated "dist/index.html" and confirm that its asset paths actually exist inside the final APK.
+
+Do not use a configuration that produces broken absolute "/assets/..." paths when the application is loaded from Android assets.
+
+---
+
+4. ANDROID WEBVIEW
+
+Find the Android Activity that creates the WebView.
+
+Configure the WebView correctly for the application.
+
+Enable all settings required by the existing application, including where appropriate:
+
+- JavaScript
+- DOM Storage
+- Local Storage
+- Required local file access
+- Required content access
+- Safe local asset loading
+
+Load the application from the actual packaged Android asset location.
+
+Expected entry point:
+
+"file:///android_asset/public/index.html"
+
+Do not use an incorrect filesystem path.
+
+---
+
+5. ANDROID ASSETS
+
+After the React/Vite production build, copy the COMPLETE contents of:
+
+"dist/"
+
+into:
+
+"app/src/main/assets/public/"
+
+The final Android project must contain:
+
+"app/src/main/assets/public/index.html"
+
+together with every JavaScript, CSS and static asset required by the application.
+
+Do not copy only "index.html".
+
+Copy the complete "dist" directory contents.
+
+Before copying, remove stale frontend files from the destination so an old build cannot interfere with the new build.
+
+---
+
+6. ASSET VALIDATION
+
+Before Gradle starts, automatically verify:
+
+- "dist/" exists
+- "dist/index.html" exists
+- "app/src/main/assets/public/" exists
+- "app/src/main/assets/public/index.html" exists
+- JavaScript files exist
+- CSS files exist
+- referenced frontend assets exist where possible
+
+If any required file is missing, fail the build immediately.
+
+Never generate an APK from incomplete frontend assets.
+
+---
+
+7. BLACK SCREEN PREVENTION
+
+Check the complete startup chain:
+
+React/Vite build
+→ "dist"
+→ Android assets
+→ WebView
+→ "index.html"
+→ JavaScript
+→ CSS
+→ application startup
+
+Fix every possible path mismatch.
+
+Check for:
+
+- incorrect Vite "base"
+- incorrect WebView URL
+- missing assets
+- incorrect relative paths
+- JavaScript startup errors
+- CSS loading errors
+- WebView configuration problems
+- incorrect Android asset directory
+- stale build files
+- incorrect working directory
+- incorrect Gradle paths
+
+Do not assume that fixing the "cp" command alone solves the Black Screen problem.
+
+---
+
+8. WEBVIEW ERROR HANDLING
+
+Add appropriate WebView error handling and logging.
+
+If the page fails to load, log the actual error instead of silently displaying a blank screen.
+
+During development/build verification, make JavaScript/WebView errors easy to identify.
+
+Do not replace the real application with a fake loading screen.
+
+The real Zoya application must load.
+
+---
+
+9. GITHUB ACTIONS
+
+Create or completely replace:
+
+".github/workflows/apk-build-zoya.yml"
+
+The workflow must:
+
+1. Checkout the repository.
+2. Locate/extract the project correctly if a ZIP is used.
+3. Detect the actual frontend project directory.
+4. Install Node.js.
+5. Install frontend dependencies.
+6. Run the production frontend build.
+7. Validate "dist/index.html".
+8. Copy the complete "dist" contents to Android "assets/public".
+9. Validate the Android assets.
+10. Set up Java/Android build requirements.
+11. Run the Gradle build.
+12. Verify that the APK was actually generated.
+13. Upload the verified APK as a GitHub Actions artifact.
+
+Do not hard-code an incorrect working directory.
+
+Do not ignore errors such as:
+
+"cp: cannot stat"
+
+"No such file or directory"
+
+If a path is wrong, fix the path.
+
+---
+
+10. GRADLE / ANDROID BUILD
+
+Use the project's existing Gradle configuration unless a correction is required.
+
+Ensure the Android build includes the "assets/public" directory inside the APK.
+
+Build the appropriate release APK.
+
+After building, verify that the APK file exists before uploading it.
+
+---
+
+11. FINAL APK VERIFICATION
+
+Before declaring success, verify:
+
+- APK exists
+- APK is not empty/corrupt
+- "index.html" was packaged
+- frontend assets were packaged
+- WebView points to the correct entry point
+- no missing "dist" files caused the build to continue incorrectly
+
+The workflow must fail instead of producing a broken APK.
+
+---
+
+EXACT FILE PLACEMENT
+
+When providing code, clearly separate every file.
+
+Use this format:
+
+FILE 1
+
+Path:
+".github/workflows/apk-build-zoya.yml"
+
+Provide the complete GitHub Actions workflow.
+
+FILE 2
+
+Path:
+"vite.config.js"
+or the actual Vite configuration file found in the project.
+
+Provide the complete corrected configuration.
+
+FILE 3
+
+Path:
+The actual Android Activity file that initializes the WebView.
+
+Provide the complete corrected code.
+
+FILE 4
+
+Path:
+Any additional Android/Gradle/configuration file that actually requires modification.
+
+Only include this if necessary.
+
+---
+
+IMPORTANT RULES
+
+Do not provide pseudo-code.
+
+Do not provide incomplete snippets when a complete file is required.
+
+Do not invent project paths.
+
+Inspect the existing project structure first.
+
+Preserve the existing Zoya application's functionality.
+
+Do not remove existing features just to make the APK build.
+
+Do not bypass build errors.
+
+Do not ignore missing files.
+
+Do not create a fake/static replacement application.
+
+The final result must be the actual Zoya AI Companion application packaged into a properly working Android APK.
+
+The final APK should open directly into the application without a Black Screen.
